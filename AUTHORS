@@ -11,7 +11,7 @@ Ascom driver was written by Sergiy Vakulenko
 Their code is shared on Sergiy Vakulenko 's Github :
 https://github.com/vakulenko/CAM8_software
 All derived work from this code must be kept free and opensource
-Indi cam86 driver was written by https://github.com/gehelem
+Indi cam86 driver was written by Gilles Le Maréchal (gehelem)
 
 This project is a simple port from original code to work with Indilib :
 http://indilib.org/
