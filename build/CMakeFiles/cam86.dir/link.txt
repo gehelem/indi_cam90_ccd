@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcam86.a  CMakeFiles/cam86.dir/libcam86.o
-/usr/bin/ranlib libcam86.a

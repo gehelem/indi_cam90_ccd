@@ -1,8 +1,0 @@
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/install.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/list_install_components.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/install/strip.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/install/local.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/cam86.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/rebuild_cache.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/indi_cam86_ccd.dir
-/home/quentin/indi_cam86_ccd/build/CMakeFiles/edit_cache.dir
