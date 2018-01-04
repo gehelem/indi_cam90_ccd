@@ -1,0 +1,2 @@
+/usr/bin/indi_cam86_ccd
+/usr/share/indi/indi_cam86_ccd.xml

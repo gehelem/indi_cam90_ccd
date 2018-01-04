@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++11 -pthread   CMakeFiles/indi_cam86_ccd.dir/cam86_ccd.o  -o indi_cam86_ccd -rdynamic libcam86.a -lftdi1 -lusb-1.0 -lindidriver -lindiAlignmentDriver -lcfitsio -lm -lz 
