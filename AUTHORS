@@ -11,6 +11,7 @@ Ascom driver was written by Sergiy Vakulenko
 Their code is shared on Sergiy Vakulenko 's Github :
 https://github.com/vakulenko/CAM8_software
 All derived work from this code must be kept free and opensource
+Indi cam86 driver was written by https://github.com/gehelem
 
 This project is a simple port from original code to work with Indilib :
 http://indilib.org/
@@ -19,3 +20,4 @@ Authors of this code :
 - Gilles Le Maréchal (gehelem)
 - Michael "Toups" from CloudyNights forum http://www.cloudynights.com/topic/497530-diy-astro-ccd-16-bit-color-6mpx-camera/
 - Luka Pravica from IceInSpace forum http://www.iceinspace.com.au/forum/showthread.php?t=146493
+- Quentin Talon (iMhack)
