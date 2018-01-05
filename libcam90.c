@@ -42,9 +42,9 @@ const int   CameraWidth  = 3900;  //image width
 const int   CameraHeight = 2610;  //image height
 const int FWidth = 3964; //New in cam90
 const int FHeight = 2720; //New in cam90
+const int CW2 = 3900/2;
+const int CH2 = 2610/2;
 const uint8_t portfirst  = 0x11;  //Initial value on the output port BDBUS
-const int  xccd   = 3900/2;
-const int  yccd   = 2610/2;
 
 bool isConnected  = false;    //variable-flag indicates the status of the connection with the camera
 int  adress;        //pointer to the current address in the output buffer FT2232HL
@@ -59,6 +59,7 @@ int  mYn,mdeltY;       //start reading and the number of the rows
 uint8_t zatv;
 int kolbyte;
 int eexp;
+int sm=0;//TODO, implement it in indi interface.
 uint8_t siin[4];
 uint16_t siout;
 double durat;
@@ -271,8 +272,10 @@ void *posExecute ( void *arg ) // Array itself actually reading through ADBUS po
     int FWdiv2 = FWidth/2;//New in cam90
     uint16_t x,y;
     uint16_t i,j;//New in cam90
+    int dd[4];//New in cam90
     if ( !errorWriteFlag ) {
         byteCnt=ftdi_read_data_modified ( CAM9A,FT_In_Buffer,kolbyte );
+	memset(bufim,0,sizeof(bufim));//New in cam90
     }
 
     if ( byteCnt!=byteExpected ) {
@@ -284,28 +287,39 @@ void *posExecute ( void *arg ) // Array itself actually reading through ADBUS po
     } else {
 
         if ( mBin == 0 ) {
-            for ( y=0; y <= mdeltY-1; y++ ) {
-                for ( x=0; x <= 1499; x++ ) {
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+4+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+4+y*6004 ) +1] );
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+5+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+5+y*6004 ) +1] );
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+6+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+6+y*6004 ) +1] );
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+7+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+7+y*6004 ) +1] );
+            for ( x=0; x <= CW2-1; x++ ) {//Change of variables CW2 and y->x, go from 0 to center
+                for ( y=0; y <= CH2; y++ ) {//go from 0 to center
+		    i=2*y+32+(CW2-1-x+16)*FHeight;
+		    j=i+FWdiv2*FHeight;
+		    dd[0]=FT_In_Buffer[2*(0+i)]+256*FT_In_Buffer[2*(0+i)+1]-sm; //Green 1  //TODO add sm in the code
+		    dd[1]=FT_In_Buffer[2*(1+i)]+256*FT_In_Buffer[2*(1+i)+1]; //Red
+		    dd[2]=FT_In_Buffer[2*(0+j)]+256*FT_In_Buffer[2*(0+j)+1]-sm; //Green2
+		    dd[3]=FT_In_Buffer[2*(1+j)]+256*FT_In_Buffer[2*(1+j)+1]; //Blue
+                    bufim[2*x+0][ (2*y+0) ]= dd[2];
+                    bufim[2*x+1][ (2*y+1) ]= dd[0];
+                    bufim[2*(CW2-x)-1][ (2*y+0) ]= dd[3];
+                    bufim[2*(CW2-x)-2][ (2*y+1) ]= dd[1];//Strange that the y part is the same as before...
                 }
 
             }
         } else {
-            for ( y=0; y <= mdeltY-1; y++ ) {
-                for ( x=0; x <= 1498; x++ ) {
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1];
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1] ;
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1] ;
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1] ;
+            for ( x=0; x <= CW2-1; x++ ) {
+                for ( y=0; y <= CH2-1; y++ ) {
+		    i=2*y+32+(CW2-1-x+16)*FHeight;
+		    dd[0]=FT_In_Buffer[2*(0+i)]+256*FT_In_Buffer[2*(0+i)+1];
+		    dd[1]=FT_In_Buffer[2*(1+i)]+256*FT_In_Buffer[2*(1+i)+1];
+		    dd[0]=dd[0]+bufim[2*x+0][2*y+0];
+		    dd[0] = (dd[0] > 65535 ? 65535 : dd[0]);//To prevent overflow
+                    bufim[2*x+0][2*y+0]=dd[0];
+                    bufim[2*x+0][2*y+1]=dd[0];
+                    bufim[2*x+1][2*y+0]=dd[0];
+                    bufim[2*x+1][2*y+1]=dd[0];
+		    dd[1] = (dd[1] > 65535 ? 65535 : dd[1]);//To prevent overflow
+                    bufim[2*(CW2-x)-1][2*y+0]=dd[1];
+                    bufim[2*(CW2-x)-1][2*y+1]=dd[1];
+                    bufim[2*(CW2-x)-2][2*y+0]=dd[1];
+                    bufim[2*(CW2-x)-2][2*y+1]=dd[1];
                 }
-                x=1499;
-                bufim[2*x+0][ ( 2* ( y+mYn ) +0 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
-                bufim[2*x+0][ ( 2* ( y+mYn ) +1 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
-                bufim[2*x+1][ ( 2* ( y+mYn ) +1 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
-                bufim[2*x+1][ ( 2* ( y+mYn ) +0 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
             }
         }
     }
@@ -437,6 +451,14 @@ bool cameraSetOffset ( int val )
     AD9822 ( 6,x );
     return true;
 }
+
+/*Set camera offset, return bool result*/
+bool CameraSetColor ( int val)
+{
+    sm=val;
+    return true;
+}
+
 
 /*Connect camera, return bool result}
 Survey attached devices and initialize AD9822*/
