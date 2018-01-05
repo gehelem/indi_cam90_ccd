@@ -5,7 +5,7 @@
     http://www.cloudynights.com/topic/497530-diy-astro-ccd-16-bit-color-6mpx-camera/
     http://astroccd.org/
 
-    Copyright (C) 2017 - Quentin Talon - Gilles Le Maréchal - Gilmanov Rim - Sergiy Vakulenko - Michael "Toups"
+    Copyright (C) 2017 - Quentin Talon - Gilles Le MarÃ©chal - Gilmanov Rim - Sergiy Vakulenko - Michael "Toups"
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -40,6 +40,8 @@
 
 const int   CameraWidth  = 3900;  //image width
 const int   CameraHeight = 2610;  //image height
+const int FWidth = 3964; //New in cam90
+const int FHeight = 2720; //New in cam90
 const uint8_t portfirst  = 0x11;  //Initial value on the output port BDBUS
 const int  xccd   = 3900/2;
 const int  yccd   = 2610/2;
@@ -112,10 +114,10 @@ bool sensorClear;
 int softwareLLDriverVersion = 91;
 
 /*A little explanation with FT2232LH.
- Always use this technique:
-  1. First, the buffer is filled and the initial bytes (required pulse sequence BDBUS output port).
+Â Always use this technique:
+Â Â 1. First, the buffer is filled and the initial bytes (required pulse sequence BDBUS output port).
 This pointer is incremented adress.
-  2. Next, the whole array is passed to the output of the command: n: = Write_USB_Device_Buffer (FT_CAM9B, adress);
+Â Â 2. Next, the whole array is passed to the output of the command: n: = Write_USB_Device_Buffer (FT_CAM9B, adress);
 Wonderful chip FT2232HL honestly without delay all transfers to your port BDBUS. Transfer 1 byte at the same time takes 65 ns.
 Time working out the next command n: = Write_USB_Device_Buffer (FT_CAM9B, adress) depends on the workload of the OSes and is not controlled
 us. Therefore, the critical sequence of pulses need to fill the whole, rather than pass on the queue.
@@ -258,15 +260,17 @@ uint16_t swap ( uint16_t x )
 }
 
 /*Contraption FT2232HL converting the read buffer to the buffer array image
-   due to the nature AD9822 read the high byte first, then low, and vice versa in delphi.
-   Use the type integer32, instead word16 due to overflow in subsequent operations*/
+Â Â  due to the nature AD9822 read the high byte first, then low, and vice versa in delphi.
+Â Â  Use the type integer32, instead word16 due to overflow in subsequent operations*/
 void *posExecute ( void *arg ) // Array itself actually reading through ADBUS port
 {
     fprintf ( stderr,"--posExecute\n" );
     uint16_t byteCnt, byteExpected;
     byteCnt = 0;
     byteExpected = kolbyte;
+    int FWdiv2 = FWidth/2;//New in cam90
     uint16_t x,y;
+    uint16_t i,j;//New in cam90
     if ( !errorWriteFlag ) {
         byteCnt=ftdi_read_data_modified ( CAM9A,FT_In_Buffer,kolbyte );
     }
@@ -319,7 +323,7 @@ void *posExecute ( void *arg ) // Array itself actually reading through ADBUS po
 }
 
 /*Filling the output buffer array for transmission and placing byte val at the address adr-chip AD9822.
-  The transfer is in sequential code.*/
+Â  The transfer is in sequential code.*/
 void AD9822 ( uint8_t adr,uint16_t val )
 {
     //fprintf ( stderr,"--AD9822\n" );
@@ -392,11 +396,11 @@ void AD9822 ( uint8_t adr,uint16_t val )
 }
 
 /*Use 2 modes:
-  1.Tsvetnoy without binning.
-  2.CH / B with 2 * 2 binning.
-  Feature ICX453 matrix is that the horizontal register has twice the capacity and
-  at one step in a horizontal vertical shift register "falls" just a couple of lines,
-  so the number of rows for the two modes are similar.*/
+Â  1.Tsvetnoy without binning.
+Â  2.CH / B with 2 * 2 binning.
+Â  Feature ICX453 matrix is that the horizontal register has twice the capacity and
+Â  at one step in a horizontal vertical shift register "falls" just a couple of lines,
+Â  so the number of rows for the two modes are similar.*/
 
 //Filling the output buffer array and the actual frame itself in the read operation mode 1
 void readframe ( void )
