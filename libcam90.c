@@ -42,8 +42,8 @@ const int   CameraWidth  = 3900;  //image width
 const int   CameraHeight = 2610;  //image height
 const int FWidth = 3964; //New in cam90
 const int FHeight = 2720; //New in cam90
-const int CW2 = 3900/2;
-const int CH2 = 2610/2;
+const int CW2 = 3900/2; //New name in cam90
+const int CH2 = 2610/2; //New name in cam90
 const uint8_t portfirst  = 0x11;  //Initial value on the output port BDBUS
 
 bool isConnected  = false;    //variable-flag indicates the status of the connection with the camera
@@ -69,8 +69,6 @@ int ftdi_result;
 static uint8_t FT_In_Buffer[26000000];
 static uint8_t FT_Out_Buffer[26000000];
 int  FT_Current_Baud;
-bool FT_OP_flag;
-bool FT_flag;
 struct ftdi_context *CAM9A, *CAM9B;
 int32_t   dwBytesRead  = 0;
 double spusb=20000;
@@ -417,7 +415,7 @@ void AD9822 ( uint8_t adr,uint16_t val )
   so the number of rows for the two modes are similar.*/
 
 //Filling the output buffer array and the actual frame itself in the read operation mode 1
-void readframe ( void )
+void readframe ( void )//TODO, check this with gehelem
 {
     //fprintf ( stderr,"--readframe\n" );
 
@@ -434,10 +432,28 @@ void readframe ( void )
     //fprintf ( stderr,"--readframe -- Done !\n" );
 }
 
+void readframe2 ( void )//TODO, check this with gehelem
+{
+    //fprintf ( stderr,"--readframe2\n" );
+
+    cameraState = cameraReading;
+    ftdi_usb_purge_rx_buffer ( CAM9A );
+    //ftdi_usb_purge_tx_buffer ( CAM9B );
+    //comread();
+
+    pthread_t t1;
+    pthread_create ( &t1, NULL, posExecute, NULL );
+    Spi_comm ( 0x10,0 ); //$ffff
+    //pthread_detach ( t1 );
+    pthread_join ( t1,NULL );
+    //fprintf ( stderr,"--readframe -- Done !\n" );
+}
+
 /*Set camera gain, return bool result*/
 bool cameraSetGain ( int val )
 {
-    AD9822 ( 3,val );
+    AD9822 ( 3,val ); //gain AD9822 green
+    AD9822 ( 2,val ); //gain AD9822 red
     return true;
 }
 
@@ -448,25 +464,28 @@ bool cameraSetOffset ( int val )
 
     x=abs ( 2*val );
     if ( val < 0 )  x=x+256;
-    AD9822 ( 6,x );
+    AD9822 ( 6,x ); //offset AD9822 green
+    AD9822 ( 5,x ); //offset AD9822 red
     return true;
 }
 
 /*Set camera offset, return bool result*/
-bool CameraSetColor ( int val)
+bool cameraSetColor ( int val)
 {
     sm=val;
     return true;
 }
 
 
-/*Connect camera, return bool result}
+/*Connect camera, return bool result
 Survey attached devices and initialize AD9822*/
 bool cameraConnect()
 {
     fprintf ( stderr,"--cameraConnect\n" );
 
-    FT_flag=true;
+    bool FT_flag=true;
+    bool FT_OP_flag;
+    uint8_t ress; 
     errorWriteFlag=false;
     sensorTempCache = 0;
     targetTempCache = 0;
@@ -526,14 +545,21 @@ bool cameraConnect()
         adress =0;
 
         AD9822 ( 0,0xD8 );
-        AD9822 ( 1,0xA0 );
+        AD9822 ( 1,0xE0 );//A0 -> E0 ?
 
         cameraSetGain ( 0 );      // Set a gain. that is not full of ADC
         cameraSetOffset ( 0 );
 
+	/* Reset AVR *///New in CAM90
+	ress=portfirst-0x10;
+	ftdi_write_data ( CAM9B, &ress, 1 );//TODO, check that this is the correct syntax with &ress
+	usleep (10*1000);
+	ress=portfirst;
+	ftdi_write_data ( CAM9B, &ress, 1 );//TODO, check that this is the correct syntax with &ress
+
         usleep ( 100*1000 );
         //send init command
-        Spi_comm ( 0xdb,0 );
+        //Spi_comm ( 0xdb,0 );
 
         usleep ( 100*1000 );
 
@@ -574,6 +600,12 @@ bool cameraDisconnect ( void )
     return FT_OP_flag;
 }
 
+bool colomn_1(void)
+{
+    Spi_comm (0x1a, 0);
+    return true;
+}
+
 void *ExposureTimerTick ( void *arg )
 {
     //fprintf ( stderr,"--ExposureTimerTick\n" );
@@ -583,7 +615,7 @@ void *ExposureTimerTick ( void *arg )
     //fprintf ( stderr,"--ExposureTimerTick : Tick !\n" );
     //Spi_comm ( 0xcb,0 ); //clear frame
     usleep ( 1000*100 );
-    readframe();
+    readframe2();//CAM90 Changed from readframe() to readframe2()
     ( void ) arg;
     pthread_exit ( NULL );
 }
@@ -594,7 +626,7 @@ bool cameraIsConnected()
     return isConnected;
 }
 
-void cameraSensorClearFull ( void )
+void cameraSensorClearFull ( void )//TODO, Check that this is done correctly on CAM90
 {
     int expoz;
     errorReadFlag = false;
@@ -633,7 +665,7 @@ int cameraStartExposure ( int bin,int StartX,int StartY,int NumX,int NumY, doubl
 {
     fprintf ( stderr,"--cameraStartExposure bin %d x %d y %d w %d h %d s %f l %d\n",bin,StartX,StartY,NumX,NumY,Duration,light );
     if ( sensorClear ) cameraSensorClearFull;
-    uint8_t d0,d1;
+    //uint8_t d0,d1;
     int expoz;
 
     errorReadFlag = false;
@@ -646,33 +678,35 @@ int cameraStartExposure ( int bin,int StartX,int StartY,int NumX,int NumY, doubl
 //     fprintf ( stderr,"--cameraStartExposure A1\n" );
 
     if ( bin==2 ) {
-        kolbyte=mdeltY*3008;
+        kolbyte=FWidth*FWidth;//Changed in CAM90
         Spi_comm ( 0x8B,1 ); //bining
         mBin=1;
     } else {
-        kolbyte=mdeltY*12008;
+        kolbyte=FWidth*FWidth*2;
         Spi_comm ( 0x8B,0 ); //no bining
         mBin=0;
     }
 //     fprintf ( stderr,"--cameraStartExposure A2\n" );
     expoz=Duration*1000;
     durat=Duration;
-    if ( expoz > 1000 ) expoz=1001; // what ?
+    //if ( expoz > 1000 ) expoz=1001; // what ?
     Spi_comm ( 0x6B,expoz );
 //     fprintf ( stderr,"--cameraStartExposure A3\n" );
 
     //camera exposing
     cameraState = cameraExposing;
-    if ( Duration > 1.0 ) {
+    if ( Duration > 2.0 ) {//Changed from 1.0 to 2.0 in CAM90
 //          fprintf ( stderr,"--cameraStartExposure B1\n" );
-        Spi_comm ( 0x2B,0 ); //shift3
-        usleep ( 40*1000 );
-        Spi_comm ( 0xCB,0 ); //clear frame
-        usleep ( 180*1000 ); //for time of clear frame
-        Spi_comm ( 0x3B,0 ); //off 15v
-        eexp= ( 1000* ( Duration-1.2 ) );
+        eexp= ( 1000* ( Duration-0. ) );
         pthread_create ( &te, NULL, ExposureTimerTick, NULL );
         pthread_detach ( te );
+        Spi_comm ( 0x2B,0 ); //shift3
+        usleep ( 100*1000 );
+        //Spi_comm ( 0xCB,0 ); //clear frame
+        //usleep ( 180*1000 ); //for time of clear frame
+        Spi_comm ( 0x3B,0 ); //off 15v
+
+
     } else {
 //          fprintf ( stderr,"--cameraStartExposure C1\n" );
         eexp=0;
@@ -686,7 +720,7 @@ bool cameraStopExposure()
 {
     // "code to kill Exposuretimer thread"
     pthread_kill ( te,0 );
-    if ( cameraState==cameraExposing ) readframe();
+    if ( cameraState==cameraExposing ) readframe2();//Change in CAM90 readframe() to readframe2()
     return true;
 }
 
@@ -708,6 +742,11 @@ bool CameraSetTemp ( float temp )
     d0=1280 + temp*10;
     Spi_comm ( 0xAB,d0 );
     return true;
+}
+
+int16_t cameraGetPower (){
+    Spi_comm(0xbc,0);
+    return siout;
 }
 
 float cameraGetSetTemp ()

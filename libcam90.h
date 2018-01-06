@@ -28,7 +28,7 @@
 #define BRB 5
 #define CAM90_LATENCYA  20
 #define CAM90_LATENCYB  20
-#define CAM90_TIMERA    6000
+#define CAM90_TIMERA    8000//Changed
 #define CAM90_TIMERB    100
 
 #ifdef __cplusplus
@@ -37,10 +37,13 @@ extern "C" {
 
 bool cameraConnect ( void );
 bool cameraDisconnect ( void );
+bool colomn_1(void);
 bool cameraSetGain ( int val );
 bool cameraSetOffset ( int val );
+bool cameraSetColor (int val);
 int  cameraStartExposure ( int bin,int StartX,int StartY,int NumX,int NumY, double Duration, bool light );
 bool cameraStopExposure ( void );
+int16_t cameraGetPower ( void );
 bool CameraSetTemp ( float temp );
 float CameraGetTemp ( void );
 float CameraGetTempDHT ( void );
