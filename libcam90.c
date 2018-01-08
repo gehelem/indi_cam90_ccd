@@ -156,17 +156,18 @@ int ftdi_read_data_modified ( struct ftdi_context *ftdi, unsigned char *buf, int
 
     offset = 0;
     result = 0;
-
     while ( size > 0 ) {
         result = ftdi_read_data ( ftdi, buf+offset, size );
         if ( result < 0 ) {
             fprintf ( stderr,"Read failed -- error (%d))\n",result );
+    fprintf ( stderr,"ftdi_read_data_modified size=%d \n",size );
             break;
         }
         if ( result == 0 ) {
             gettimeofday ( &now, NULL );
             if ( now.tv_sec > timeout.tv_sec || ( now.tv_sec == timeout.tv_sec && now.tv_usec > timeout.tv_usec ) ) {
                 fprintf ( stderr,"Read failed -- timeout %d \n",offset );
+    fprintf ( stderr,"ftdi_read_data_modified size=%d \n",size );
                 break;
             }
             nanosleep ( &tm, NULL ); //sleep for 1 microsecond
